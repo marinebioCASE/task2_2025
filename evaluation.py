@@ -36,12 +36,12 @@ def run(predictions_path, ground_truth_path, iou_threshold=0.5):
     ground_truth['detected'] = 0
     predictions['correct'] = 0
 
-    for wav_path_name, wav_predictions in predictions.groupby('filename'):
+    for wav_path_name, wav_predictions in tqdm(predictions.groupby('filename'), total=len(predictions.filename.unique())):
         ground_truth_wav = ground_truth.loc[ground_truth['filename'] == wav_path_name]
         for class_id, class_predictions in wav_predictions.groupby('annotation'):
             ground_truth_wav_class = ground_truth_wav.loc[ground_truth_wav['annotation'] == class_id]
             ground_truth_not_detected = ground_truth_wav_class.loc[ground_truth_wav_class.detected == 0]
-            for i, row in tqdm(class_predictions.iterrows(), total=len(class_predictions)):
+            for i, row in class_predictions.iterrows():
                 # For each row, compute the minimum end and maximum start with all the ground truths
                 min_end = np.minimum(row['end_datetime'], ground_truth_not_detected['end_datetime'])
                 max_start = np.maximum(row['start_datetime'], ground_truth_not_detected['start_datetime'])
