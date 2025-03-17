@@ -9,9 +9,8 @@ def run():
     run_name = 'biodcase_baseline'
 
     # Check if CUDA is available
-    print('Is CUDA available?')
-    print(torch.cuda.is_available())
-    torch.cuda.empty_cache()
+    print('CUDA device count:')
+    print(torch.cuda.device_count())
 
     # Read the config file
     with open(YAML_FILE, 'r') as file:
@@ -40,7 +39,7 @@ def run():
     }
 
     model.train(epochs=200, batch=32, data=YAML_FILE,
-                project=config['path'] + '/runs/detect/miller/' + run_name, resume=False, **best_params)
+                project=config['path'] + '/runs/detect/miller/' + run_name, resume=False, **best_params, device=0)
 
     experiment.end()
 
