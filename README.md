@@ -1,6 +1,34 @@
-# task2_2025
+# bioDCASE 2025: task2_2025
 
-## Which output do you need? 
+
+## Getting started 
+
+### Long-term data 
+It's common in long-term audio analysis to segment (window) the audio. 
+This challenge is an event-detection challenge. This means that you have to provide a start and end time for each 
+detected event of interest (and the corresponding class annotation). 
+The evaluation will then compare the overlap between the provided detections and the original annotations. A 30% overlap 
+will be considered a good detection. Because the shortest baleen whale calls present in the datasets are around 1.5 
+seconds, we therefore recommend to not use a time resolution lower than 5 seconds (lower time resolution = bigger window). 
+
+
+### Spectrograms
+Very often to train these models, spectrograms are used. 
+This is not necessary, but it's very common.
+You can either create the spectrograms in advance, or you can create them on the fly. 
+
+To create the spectrograms in advance, we propose you the code in script XXX 
+
+To create the spectrograms on the fly, we propose XXX. 
+
+
+### Dealing with the datetime format 
+All the wav files have the following naming convention: yyyy-mm-DDTHH-MM-SS-fff
+This datetime of the wav file specifies the beginning of that specific file. 
+Then, if a detection is found to start at second X of that file, the start_datetime of the annotations (and also the 
+ones you need to prepare for results) should be the file start + X seconds.
+
+### Which output do you need? 
 The necessary output is a csv file containing these columns: 
 
 | dataset       | filename                    | annotation | start_datetime                   | end_datetime                     |
@@ -25,10 +53,3 @@ If the first one is provided, the labels will be joined following:
 
 To run the evaluation, the csv with the obtained detections and the mentioned format needs to be passed when asked in 
 the prompt. 
-
-
-# Getting started 
-Very often to train these models, spectrograms are used. 
-This is not necessary, but it's very common.
-To create the spectrograms 
-
