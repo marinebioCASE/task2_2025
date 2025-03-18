@@ -1,5 +1,4 @@
 # Description
-
 This is the evaluation metrics for the bioDCASE 2025 task 2.
 
 
@@ -29,19 +28,45 @@ The necessary output is a csv file containing these columns:
 | kerguelen2014 | 2014-02-18T21-00-00_000.wav | bmz        | 2014-02-18T21:48:19.270900+00:00 | 2014-02-18T21:48:28.292000+00:00 |
 
 
-The accepted annotations are:  
-'bma', 'bmb', 'bmz', 'bmd', 'bpd', 'bp20', 'bp20plus'
+The accepted annotations names are:  
+* bma
+* bmb
+* bmz
+* bmd
+* bpd
+* bp20
+* bp20plus
 
 or directly the aggregated options:
-'bmabz', 'd', 'bp'
+* bmabz
+* d
+* bp
 
 If the first one is provided, the labels will be joined following: 
 
-'bmabz' : 'bma', 'bmb', 'bmz'
-'d': 'bmd', 'bpd'
-'bp': 'bp20', 'bp20plus'
+bmabz : bma, bmb, bmz
+d: bmd, bpd
+bp: bp20, bp20plus
 
 To run the evaluation, the csv with the obtained detections and the mentioned format needs to be passed when asked in 
-the prompt. 
-
+the prompt.
 The csv should follow the mentioned format. 
+
+```bash
+python evaluation.py 
+```
+
+## Evaluation metrics
+The output is evaluated using a 1D IOU. 
+IOU means intersection over union, and basically it looks at all the time when the predicted event overlaps with the 
+ground truth event, divided by the total time spanning from the minimum start time to the maximum end time. 
+Passive Acoustics Monitoring can be used to estimate population densities. For this reason, getting an accurate number 
+of calls is crucial. Therefore, we have decided to penalize when there are several detections overlapping with one 
+single ground truth. This means that if 3 predicted sound events overlap with one single ground truth event, only one of
+the predicted sound events will be marked as a true positive (TP) and assigned as correct, and the rest will be marked 
+as a false positive (FP).
+TP are then computed counting all the prediction events which have been marked as correct. 
+FP are all the prediction events which were not assigned to a ground truth. 
+FN are all the ground truth events which have not been assigned any prediction.
+
+
