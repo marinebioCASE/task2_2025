@@ -1,4 +1,5 @@
 import json
+import shutil
 import os
 import pathlib
 
@@ -44,6 +45,7 @@ class YOLODataset:
         if not self.images_folder.exists():
             os.mkdir(self.images_folder)
             os.mkdir(self.labels_folder)
+            os.mkdir(self.labels_folder.joinpath('backgrounds'))
 
         self.F_MIN = 0
         self.blocksize = int(self.duration * self.desired_fs)
@@ -59,25 +61,36 @@ class YOLODataset:
             json.dump(self.config, f)
 
     def create_dataset(self, class_encoding):
-        self.convert_challenge_annotations_to_yolo(class_encoding=class_encoding)
-        selected_samples = self.select_background_labels()
+        indices_per_deployment = self.convert_challenge_annotations_to_yolo(class_encoding=class_encoding)
+        selected_samples = self.select_background_labels(indices_per_deployment)
         self.create_spectrograms(selected_samples=selected_samples)
 
+    def select_background_labels(self, indices_per_deployment):
+        for dataset, indices_dataset in indices_per_deployment.items():
+            label_indices = indices_dataset['labels']
+            background_indices = indices_dataset['background']
+            n_labels = len(label_indices)
+            print(f'There are {n_labels} labels in the dataset {dataset}')
 
-    #def select_background_labels(self):
+            selected_background = background_indices.sample(n=n_labels)
+            indices_per_deployment[dataset]['selected_background'] = selected_background
 
-        #return selected_samples
+            for selection in selected_background:
+                shutil.move(self.labels_folder.joinpath('backgrounds', selection + '.txt'),
+                            self.labels_folder.joinpath(selection + '.txt'))
 
-    def create_spectrograms(self, selected_samples,  overwrite=True):
+        return indices_per_deployment
+
+    def create_spectrograms(self, selected_samples, overwrite=True):
         # First, create all the images
         print(self.wavs_folder)
-        for wav_path in tqdm(list(self.wavs_folder.glob('*/*.wav')), total=len(list(self.wavs_folder.glob('*/*.wav')))):
-            waveform_info = torchaudio.info(wav_path, format='WAV')
-            i = 0.0
-            while (i * self.duration + self.duration / 2) < (waveform_info.num_frames / waveform_info.sample_rate):
-                img_name = wav_path.name.replace('.wav', '_%s.png' % i)
-                img_path = self.images_folder.joinpath(img_name)
-
+        for dataset, indices_dataset in selected_samples:
+            selected_indices = indices_dataset['selected_background'] + indices_dataset['labels']
+            for sample_i in selected_indices:
+                img_path = self.images_folder.joinpath(sample_i + '.png')
+                wav_name = sample_i.split('_')[:2].join('_')
+                wav_path = self.wavs_folder.joinpath(wav_name + '.wav')
+                i = float(sample_i.split('_')[-1])
                 if overwrite or (not img_path.exists()):
                     start_chunk = int(i * self.blocksize)
                     chunk, fs = torchaudio.load(wav_path, normalize=True, frame_offset=start_chunk,
@@ -127,7 +140,10 @@ class YOLODataset:
         :return:
         """
         f_bandwidth = (self.desired_fs / 2) - self.F_MIN
+        indices_per_deployment = {}
         for selections_path in self.annotations_folder.glob('*.csv'):
+            background_indices = []
+            labels_indices = []
             selections = pd.read_csv(selections_path, parse_dates=['start_datetime', 'end_datetime'])
             selections.loc[selections['low_frequency'] < self.F_MIN, 'low_frequency'] = self.F_MIN
             selections['height'] = (selections['high_frequency'] - selections['low_frequency']) / f_bandwidth
@@ -183,19 +199,28 @@ class YOLODataset:
                     chunk_selection.y = chunk_selection.y.clip(lower=0, upper=1)
 
                     chunk_selection = chunk_selection.replace(to_replace=class_encoding).infer_objects(copy=False)
+                    new_name = dataset_name + wav_name.replace('.wav', '_%s' % i)
+
+                    if len(chunk_selection) > 0:
+                        labels_indices.append(new_name)
+                        label_path = self.labels_folder.joinpath(new_name + '.txt')
+                    else:
+                        background_indices.append(new_name)
+                        label_path = self.labels_folder.joinpath('backgrounds', new_name + '.txt')
+
                     chunk_selection[[
                         'annotation',
                         'x',
                         'y',
                         'width',
-                        'height']].to_csv(self.labels_folder.joinpath(wav_name.replace('.wav', '_%s.txt' % i)),
-                                          header=None, index=None, sep=' ', mode='w')
+                        'height']].to_csv(label_path, header=None, index=None, sep=' ', mode='w')
                     # Add the station if the image adds it as well!
                     i += self.overlap
-                    pbar.update(1)
+                pbar.update(1)
+            indices_per_deployment[dataset_name] = {'background': background_indices, 'labels': labels_indices}
             pbar.close()
 
-        return background_samples, label_samples
+        return indices_per_deployment
 
     def all_predictions_to_dataframe(self, labels_folder, overwrite=True):
         detected_foregrounds = []
