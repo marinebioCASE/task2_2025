@@ -14,6 +14,8 @@ from PIL import Image
 from tqdm import tqdm
 import datetime
 
+pd.set_option('future.no_silent_downcasting', True)
+
 
 class YOLODataset:
     def __init__(self, config, path_to_dataset):
@@ -56,7 +58,17 @@ class YOLODataset:
         with open(config_path, 'w') as f:
             json.dump(self.config, f)
 
-    def create_spectrograms(self, overwrite=True):
+    def create_dataset(self, class_encoding):
+        self.convert_challenge_annotations_to_yolo(class_encoding=class_encoding)
+        selected_samples = self.select_background_labels()
+        self.create_spectrograms(selected_samples=selected_samples)
+
+
+    #def select_background_labels(self):
+
+        #return selected_samples
+
+    def create_spectrograms(self, selected_samples,  overwrite=True):
         # First, create all the images
         print(self.wavs_folder)
         for wav_path in tqdm(list(self.wavs_folder.glob('*/*.wav')), total=len(list(self.wavs_folder.glob('*/*.wav')))):
@@ -115,7 +127,7 @@ class YOLODataset:
         :return:
         """
         f_bandwidth = (self.desired_fs / 2) - self.F_MIN
-        for selections_path in self.annotations_folder.glob('*.txt'):
+        for selections_path in self.annotations_folder.glob('*.csv'):
             selections = pd.read_csv(selections_path, parse_dates=['start_datetime', 'end_datetime'])
             selections.loc[selections['low_frequency'] < self.F_MIN, 'low_frequency'] = self.F_MIN
             selections['height'] = (selections['high_frequency'] - selections['low_frequency']) / f_bandwidth
@@ -125,17 +137,18 @@ class YOLODataset:
 
             # compute the width in pixels
             selections['width'] = (
-                        (selections['end_datetime'] - selections['start_datetime']).total_seconds() / self.duration)
+                        (selections['end_datetime'] - selections['start_datetime']).dt.total_seconds() / self.duration)
 
             # Deal with datetime
             selections['start_datetime_wav'] = pd.to_datetime(selections['filename'].apply(lambda y: y.split('.')[0]),
-                                                              format='%Y-%m-%dT%H:%M:%S')
-            selections['start_seconds'] = (selections.start_datetime - selections.start_datetime_wav).total_seconds()
-            selections['end_seconds'] = (selections.end_datetime - selections.start_datetime_wav).total_seconds()
+                                                              format='%Y-%m-%dT%H-%M-%S_%f')
+            selections['start_datetime_wav'] = selections['start_datetime_wav'].dt.tz_localize('UTC')
+            selections['start_seconds'] = (selections.start_datetime - selections.start_datetime_wav).dt.total_seconds()
+            selections['end_seconds'] = (selections.end_datetime - selections.start_datetime_wav).dt.total_seconds()
 
             pbar = tqdm(total=len(selections['filename'].unique()))
 
-            dataset_name = selections.iloc[0, 'dataset']
+            dataset_name = selections.iloc[0].dataset
             for wav_name, wav_selections in selections.groupby('filename'):
                 wav_file_path = self.wavs_folder.joinpath(dataset_name, wav_name)
                 waveform_info = torchaudio.info(wav_file_path)
@@ -169,7 +182,7 @@ class YOLODataset:
                     chunk_selection.x = chunk_selection.x.clip(lower=0, upper=1)
                     chunk_selection.y = chunk_selection.y.clip(lower=0, upper=1)
 
-                    chunk_selection = chunk_selection.replace(class_encoding)
+                    chunk_selection = chunk_selection.replace(to_replace=class_encoding).infer_objects(copy=False)
                     chunk_selection[[
                         'annotation',
                         'x',
@@ -181,6 +194,8 @@ class YOLODataset:
                     i += self.overlap
                     pbar.update(1)
             pbar.close()
+
+        return background_samples, label_samples
 
     def all_predictions_to_dataframe(self, labels_folder, overwrite=True):
         detected_foregrounds = []
@@ -441,5 +456,4 @@ if __name__ == '__main__':
     config = json.load(f)
 
     ds = YOLODataset(config, path_to_dataset)
-    ds.create_spectrograms()
-    ds.convert_challenge_annotations_to_yolo(class_encoding=config['class_encoding'])
+    ds.create_dataset(class_encoding=config['class_encoding'])
