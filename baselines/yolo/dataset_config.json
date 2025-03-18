@@ -1,0 +1,14 @@
+{
+	"duration" : 30,
+    "overlap" : 0.5,
+    "desired_fs" : 250,
+    "channel" : 0,
+	"log": false,
+	"color": false,
+
+	"nfft" : 512,
+    "win_len" : 256,
+    "hop_len" : 20,
+
+    "class_encoding": {"bma": 0,"bmb": 1, "bmz": 2, "bmd": 3, "bpd": 4, "bp20": 5, "bp20plus": 6}
+}

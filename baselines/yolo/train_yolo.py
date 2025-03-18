@@ -5,7 +5,7 @@ from ultralytics import YOLO
 
 
 def run():
-    YAML_FILE = './custom_joined.yaml'
+    YAML_FILE = './custom.yaml'
     run_name = 'biodcase_baseline'
 
     # Check if CUDA is available

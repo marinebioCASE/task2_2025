@@ -1,8 +1,6 @@
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-import datetime
-
 
 joining_dict = {'bma': 'bmabz',
                 'bmb': 'bmabz',
