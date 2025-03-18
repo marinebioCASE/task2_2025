@@ -48,6 +48,9 @@ bmabz : bma, bmb, bmz
 d: bmd, bpd
 bp: bp20, bp20plus
 
+A combination of aggregated and not aggregated labels is also allowed as a result (and the non-aggregated ones will be 
+aggregated for evaluation).
+
 To run the evaluation, the csv with the obtained detections and the mentioned format needs to be passed when asked in 
 the prompt.
 The csv should follow the mentioned format. 
