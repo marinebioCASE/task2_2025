@@ -13,7 +13,7 @@ seconds, we therefore recommend to not use a time resolution lower than 5 second
 
 
 ### Dealing with the datetime format 
-All the wav files have the following naming convention: yyyy-mm-DDTHH-MM-SS-fff
+All the wav files have the following naming convention: yyyy-mm-DDTHH-MM-SS_fff.wav
 This datetime of the wav file specifies the beginning of that specific file. 
 Then, if a detection is found to start at second X of that file, the start_datetime of the annotations (and also the 
 ones you need to prepare for results) should be the file start + X seconds.
