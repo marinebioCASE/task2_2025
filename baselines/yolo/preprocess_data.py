@@ -2,6 +2,7 @@ import json
 import shutil
 import os
 import pathlib
+import random
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -16,6 +17,7 @@ from tqdm import tqdm
 import datetime
 
 pd.set_option('future.no_silent_downcasting', True)
+random.seed(42)
 
 
 class YOLODataset:
@@ -69,10 +71,10 @@ class YOLODataset:
         for dataset, indices_dataset in indices_per_deployment.items():
             label_indices = indices_dataset['labels']
             background_indices = indices_dataset['background']
-            n_labels = len(label_indices)
+            n_labels = min(len(label_indices), len(background_indices))
             print(f'There are {n_labels} labels in the dataset {dataset}')
 
-            selected_background = background_indices.sample(n=n_labels)
+            selected_background = random.sample(background_indices, n_labels)
             indices_per_deployment[dataset]['selected_background'] = selected_background
 
             for selection in selected_background:
@@ -83,13 +85,13 @@ class YOLODataset:
 
     def create_spectrograms(self, selected_samples, overwrite=True):
         # First, create all the images
-        print(self.wavs_folder)
-        for dataset, indices_dataset in selected_samples:
+        print('Creating spectrograms...')
+        for dataset, indices_dataset in selected_samples.items():
             selected_indices = indices_dataset['selected_background'] + indices_dataset['labels']
-            for sample_i in selected_indices:
+            for sample_i in tqdm(selected_indices):
                 img_path = self.images_folder.joinpath(sample_i + '.png')
-                wav_name = sample_i.split('_')[:2].join('_')
-                wav_path = self.wavs_folder.joinpath(wav_name + '.wav')
+                wav_name = '_'.join(sample_i.split('_')[1:3])
+                wav_path = self.wavs_folder.joinpath(dataset, wav_name + '.wav')
                 i = float(sample_i.split('_')[-1])
                 if overwrite or (not img_path.exists()):
                     start_chunk = int(i * self.blocksize)
@@ -141,7 +143,7 @@ class YOLODataset:
         """
         f_bandwidth = (self.desired_fs / 2) - self.F_MIN
         indices_per_deployment = {}
-        for selections_path in self.annotations_folder.glob('*.csv'):
+        for selections_path in list(self.annotations_folder.glob('*.csv')):
             background_indices = []
             labels_indices = []
             selections = pd.read_csv(selections_path, parse_dates=['start_datetime', 'end_datetime'])
@@ -150,10 +152,6 @@ class YOLODataset:
 
             # The y is from the TOP!
             selections['y'] = 1 - (selections['high_frequency'] / f_bandwidth)
-
-            # compute the width in pixels
-            selections['width'] = (
-                        (selections['end_datetime'] - selections['start_datetime']).dt.total_seconds() / self.duration)
 
             # Deal with datetime
             selections['start_datetime_wav'] = pd.to_datetime(selections['filename'].apply(lambda y: y.split('.')[0]),
@@ -172,34 +170,29 @@ class YOLODataset:
                 i = 0.0
                 while (i * self.duration + self.duration / 2) < (waveform_info.num_frames / waveform_info.sample_rate):
                     start_seconds = i * self.duration
-                    end_seconds = i * self.duration + self.duration
+                    end_seconds = start_seconds + self.duration
 
                     start_mask = (wav_selections['start_seconds'] >= start_seconds) & (wav_selections[
                                                                                            'start_seconds'] <= end_seconds)
                     end_mask = (wav_selections['start_seconds'] >= start_seconds) & (wav_selections[
                                                                                          'end_seconds'] <= end_seconds)
                     chunk_selection = wav_selections.loc[start_mask | end_mask]
+                    chunk_selection = chunk_selection.assign(start_x=((chunk_selection['start_seconds'] - i * self.duration) / self.duration).clip(lower=0, upper=1).values)
+                    chunk_selection = chunk_selection.assign(end_x=((chunk_selection['end_seconds'] - i * self.duration) / self.duration).clip(lower=0, upper=1).values)
 
-                    chunk_selection = chunk_selection.assign(
-                        x=(chunk_selection['start_seconds'] - i * self.duration) / self.duration)
-
-                    chunk_selection.loc[
-                        (chunk_selection['width'] + chunk_selection['x']) > 1, 'width'] = 1 - chunk_selection['x']
-
-                    chunk_selection.loc[chunk_selection['x'] < 0, 'width'] = chunk_selection['width'] - chunk_selection[
-                        'x']
-                    chunk_selection.loc[chunk_selection['x'] < 0, 'x'] = 0
+                    # compute the width in pixels
+                    chunk_selection = chunk_selection.assign(width=(chunk_selection['end_x'] - chunk_selection['start_x']).values)
 
                     # Save the chunk detections so that they are with the yolo format
                     # <class > < x > < y > < width > < height >
-                    chunk_selection['x'] = (chunk_selection['x'] + chunk_selection['width'] / 2)
-                    chunk_selection['y'] = (chunk_selection['y'] + chunk_selection['height'] / 2)
+                    chunk_selection = chunk_selection.assign(x=(chunk_selection['start_x'] + chunk_selection['width'] / 2).values)
+                    chunk_selection.loc[:, 'y'] = (chunk_selection['y'] + chunk_selection['height'] / 2).values
 
-                    chunk_selection.x = chunk_selection.x.clip(lower=0, upper=1)
-                    chunk_selection.y = chunk_selection.y.clip(lower=0, upper=1)
-
+                    # if ((chunk_selection.x + chunk_selection.width/2) > 1).sum() > 0 or (chunk_selection.y > 1).sum() > 0:
+                    #     print(chunk_selection)
+                    #     print(start_seconds, end_seconds)
                     chunk_selection = chunk_selection.replace(to_replace=class_encoding).infer_objects(copy=False)
-                    new_name = dataset_name + wav_name.replace('.wav', '_%s' % i)
+                    new_name = dataset_name + '_' + wav_name.replace('.wav', '_%s' % i)
 
                     if len(chunk_selection) > 0:
                         labels_indices.append(new_name)
@@ -225,13 +218,10 @@ class YOLODataset:
     def all_predictions_to_dataframe(self, labels_folder, overwrite=True):
         detected_foregrounds = []
         f_bandwidth = (self.desired_fs / 2) - self.F_MIN
-        if self.split_folders:
-            wav_folder = self.wavs_folder.joinpath(labels_folder.name)
-        else:
-            wav_folder = self.wavs_folder
+        wav_folder = self.wavs_folder
         for txt_label in tqdm(labels_folder.glob('*.txt'), total=len(list(labels_folder.glob('*.txt')))):
             name_parts = txt_label.name.split('_')
-            wav_name = '_'.join(name_parts[:-1]) + '.wav'
+            wav_name = '_'.join(name_parts[1:-1]) + '.wav'
             original_wav = wav_folder.joinpath(wav_name)
             offset_seconds = float(name_parts[-1].split('.txt')[0])
             detections = pd.read_table(txt_label, header=None, sep=' ', names=['class', 'x', 'y',
@@ -242,105 +232,46 @@ class YOLODataset:
             detections['start_seconds'] = (detections.x - detections.width / 2 + offset_seconds) * self.duration
             detections['image'] = txt_label.name.replace('.txt', '')
 
-            # for _, row in detections.iterrows():
             detected_foregrounds.extend(detections.values)
-            # detected_foregrounds = pd.concat([detected_foregrounds, detections], ignore_index=True)
+
         detected_foregrounds = np.stack(detected_foregrounds)
         detected_foregrounds = pd.DataFrame(detected_foregrounds, columns=detections.columns)
         detected_foregrounds['duration'] = detected_foregrounds.width * self.duration
-        detected_foregrounds['min_freq'] = (1 - (
+        detected_foregrounds['low_frequency'] = (1 - (
                     detected_foregrounds.y + detected_foregrounds.height / 2)) * f_bandwidth
-        detected_foregrounds['max_freq'] = (1 - (
+        detected_foregrounds['high_frequency'] = (1 - (
                     detected_foregrounds.y - detected_foregrounds.height / 2)) * f_bandwidth
         return detected_foregrounds
 
-    def convert_yolo_detections_to_csv(self, predictions_folder, add_station_name=False, min_conf=None):
+    def convert_yolo_detections_to_csv(self, predictions_folder, class_encoding, min_conf=0.5):
         # Convert to DataFrame
         labels_folder = predictions_folder.joinpath('labels')
-        if self.split_folders:
-            folders_list = [f for f in labels_folder.glob('*') if f.is_dir()]
+        print('processing folder %s' % f.name)
+
+        roi_path = predictions_folder.joinpath('roi_detections_clean.txt')
+        if not roi_path.exists():
+            detected_foregrounds = self.all_predictions_to_dataframe(labels_folder=labels_folder)
+            if min_conf is not None:
+                detected_foregrounds = detected_foregrounds.loc[detected_foregrounds.confidence >= min_conf]
+
+            # Convert to RAVEN format
+            columns = ['dataset', 'annotation', 'low_frequency', 'high_frequency', 'start_datetime', 'end_datetime']
+
+            detected_foregrounds.loc[detected_foregrounds['low_frequency'] < 0, 'low_frequency'] = 0
+            detected_foregrounds = detected_foregrounds.loc[
+                detected_foregrounds['low_frequency'] <= self.desired_fs / 2]
+            detected_foregrounds.loc[detected_foregrounds['high_frequency'] > self.desired_fs / 2,
+            'high_frequency'] = self.desired_fs / 2
+
+            clean_detections = pd.DataFrame()
+            for _, class_detections in detected_foregrounds.groupby('Tags'):
+                clean_detections_class = self.join_overlapping_detections_in_chunks(class_detections)
+                clean_detections = pd.concat([clean_detections, clean_detections_class])
+            clean_detections['Selection'] = clean_detections['Selection'].astype(int)
+
+            clean_detections.to_csv(roi_path, sep='\t', index=False)
         else:
-            folders_list = [labels_folder]
-        for f in folders_list:
-            print('processing folder %s' % f.name)
-            if self.split_folders:
-                roi_path = predictions_folder.joinpath('roi_detections_clean_%s.txt' % f.name)
-            else:
-                roi_path = predictions_folder.joinpath('roi_detections_clean.txt')
-            if not roi_path.exists():
-                detected_foregrounds = self.all_predictions_to_dataframe(labels_folder=f)
-                if min_conf is not None:
-                    detected_foregrounds = detected_foregrounds.loc[detected_foregrounds.confidence >= min_conf]
-
-                # Convert to RAVEN format
-                columns = ['Selection', 'View', 'Channel', 'Begin File', 'End File', 'start_datetime', 'end_datetime',
-                           'Beg File Samp (samples)', 'End File Samp (samples)', 'low_frequency', 'high_frequency',
-                           'Tags']
-
-                # convert the df to Raven format
-                detected_foregrounds['low_frequency'] = detected_foregrounds['min_freq']
-                detected_foregrounds['high_frequency'] = detected_foregrounds['max_freq']
-                detected_foregrounds['Tags'] = detected_foregrounds['class']
-
-                detected_foregrounds.loc[detected_foregrounds['low_frequency'] < 0, 'low_frequency'] = 0
-                detected_foregrounds = detected_foregrounds.loc[
-                    detected_foregrounds['low_frequency'] <= self.desired_fs / 2]
-                detected_foregrounds.loc[detected_foregrounds['high_frequency'] > self.desired_fs / 2,
-                'high_frequency'] = self.desired_fs / 2
-
-                detected_foregrounds['View'] = 'Spectrogram 1'
-                detected_foregrounds['Channel'] = 1
-                detected_foregrounds['Begin File'] = detected_foregrounds['wav_name']
-                detected_foregrounds['End File'] = detected_foregrounds['wav_name']
-                detected_foregrounds['start_datetime'] = detected_foregrounds['start_seconds']
-                detected_foregrounds['end_datetime'] = detected_foregrounds['start_seconds'] + detected_foregrounds[
-                    'duration']
-
-                detected_foregrounds['fs'] = np.nan
-                detected_foregrounds['cummulative_sec'] = np.nan
-
-                cummulative_seconds = 0
-                if self.split_folders:
-                    wavs_f_folder = self.wavs_folder.joinpath(f.name)
-                else:
-                    wavs_f_folder = self.wavs_folder
-                wavs_to_check = list(wavs_f_folder.glob('*.wav'))
-                if isinstance(wavs_to_check[0], pathlib.PosixPath):
-                    wavs_to_check.sort()
-                for wav_file_path in wavs_to_check:
-                    if add_station_name:
-                        wav_path_name = wav_file_path.parent.parent.parent.name.split('_')[0] + '_' + wav_file_path.name
-                    else:
-                        wav_path_name = wav_file_path.name
-
-                    waveform_info = torchaudio.info(wav_file_path)
-                    mask = detected_foregrounds['wav_name'] == wav_path_name
-                    detected_foregrounds.loc[mask, 'cummulative_sec'] = cummulative_seconds
-                    detected_foregrounds.loc[mask, 'fs'] = waveform_info.sample_rate
-                    cummulative_seconds += waveform_info.num_frames / waveform_info.sample_rate
-
-                detected_foregrounds['Beg File Samp (samples)'] = (detected_foregrounds['start_datetime']
-                                                                   * detected_foregrounds['fs']).astype(int)
-                detected_foregrounds['End File Samp (samples)'] = (detected_foregrounds['end_datetime']
-                                                                   * detected_foregrounds['fs']).astype(int)
-                detected_foregrounds['start_datetime'] = detected_foregrounds['start_datetime'] + detected_foregrounds[
-                    'cummulative_sec']
-                detected_foregrounds['end_datetime'] = detected_foregrounds['end_datetime'] + detected_foregrounds[
-                    'cummulative_sec']
-
-                detected_foregrounds = detected_foregrounds.sort_values('start_datetime')
-                detected_foregrounds = detected_foregrounds.reset_index(names='Selection')
-                detected_foregrounds['Selection'] = detected_foregrounds['Selection'] + 1
-
-                clean_detections = pd.DataFrame()
-                for _, class_detections in detected_foregrounds.groupby('Tags'):
-                    clean_detections_class = self.join_overlapping_detections_in_chunks(class_detections)
-                    clean_detections = pd.concat([clean_detections, clean_detections_class])
-                clean_detections['Selection'] = clean_detections['Selection'].astype(int)
-
-                clean_detections.to_csv(roi_path, sep='\t', index=False)
-            else:
-                clean_detections = pd.read_table(roi_path)
+            clean_detections = pd.read_table(roi_path)
         return clean_detections, roi_path
 
     @staticmethod

@@ -1,7 +1,7 @@
-path:  './biodcase'
-train: './biodcase/biodcase_development_set/train'
-test: './biodcase/biodcase_evaluation_set'
-val: './biodcase/biodcase_development_set/train'
+path:  '/mnt/fscompute_shared/roi/datasets/biodcase'
+train: '/mnt/fscompute_shared/roi/datasets/biodcase/biodcase_development_set/train'
+test: '/mnt/fscompute_shared/roi/datasets/biodcase/biodcase_evaluation_set'
+val: '/mnt/fscompute_shared/roi/datasets/biodcase/biodcase_development_set/validation'
 
 #classes names
 nc: 7
