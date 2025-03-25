@@ -26,7 +26,7 @@ def run():
         )
 
     # Load a model
-    model = YOLO('yolo11s.yaml')
+    model = YOLO('yolo11s.pt')
 
     # train the model
     best_params = {
