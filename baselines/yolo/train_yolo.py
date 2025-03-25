@@ -10,7 +10,7 @@ import os
 
 def run():
     YAML_FILE = './custom_joined.yaml'
-    run_name = 'biodcase_baseline'
+    run_name = 'biodcase_baseline' # Change to the name of your run
 
     # Check if CUDA is available
     print('CUDA device count:')
@@ -49,7 +49,7 @@ def run():
         'crop_fraction': 0,
     }
     model.train(epochs=20, batch=32, data=YAML_FILE,
-                project=config['path'] + '/runs/detect/miller/' + run_name, resume=False, **best_params, device=0)
+                project=config['path'] + '/runs/' + run_name, resume=False, **best_params, device=0)
 
     if "COMET_API_KEY" in os.environ and comet_ml is not None:
         experiment.end()
