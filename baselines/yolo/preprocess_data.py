@@ -231,16 +231,12 @@ class YOLODataset:
 
         return indices_per_deployment
 
-    def convert_yolo_detections_to_csv(self, predictions_folder, class_encoding):
+    def convert_yolo_detections_to_csv(self, predictions_folder, reverse_class_encoding):
         # Convert to DataFrame
         labels_folder = predictions_folder.joinpath('labels')
 
         columns = ['dataset', 'filename', 'annotation', 'low_frequency', 'high_frequency',
-                   'start_datetime', 'end_datetime', 'confidence']
-
-        reverse_class_encoding = {}
-        for k, v in class_encoding.items():
-            reverse_class_encoding[v] = k
+                   'start_datetime', 'end_datetime', 'confidence', 'offset_i']
 
         detections_list = []
         f_bandwidth = (self.desired_fs / 2) - self.F_MIN
@@ -249,20 +245,18 @@ class YOLODataset:
             wav_name = '_'.join(name_parts[1:-1]) + '.wav'
             dataset_name = name_parts[0]
 
-            offset_seconds = float(name_parts[-1].split('.txt')[0])
+            offset_i = float(name_parts[-1].split('.txt')[0])
             detections_i = pd.read_table(txt_label, header=None, sep=' ', names=['annotation', 'x', 'y',
                                                                                  'width', 'height', 'confidence'])
             detections_i['filename'] = wav_name
             detections_i['dataset'] = dataset_name
-            detections_i['offset_seconds'] = offset_seconds
+            detections_i['offset_i'] = offset_i
+            detections_list.append(detections_i)
 
-            detections_list.extend(detections_i.values)
-
-        detections = np.stack(detections_list)
-        detections = pd.DataFrame(detections, columns=detections_i.columns)
+        detections = pd.concat(detections_list, ignore_index=True)
 
         # start and end in seconds from beginning of file
-        detections['start_seconds'] = (detections.x - detections.width / 2 + detections.offset_seconds) * self.duration
+        detections['start_seconds'] = (detections.x - detections.width / 2 + detections.offset_i) * self.duration
         detections['end_seconds'] = detections.width * self.duration + detections['start_seconds']
 
         # start of wav file datetime
