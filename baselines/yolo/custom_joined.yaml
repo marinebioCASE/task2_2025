@@ -4,14 +4,10 @@ test: '/mnt/fscompute_shared/roi/datasets/biodcase/biodcase_evaluation_set'
 val: '/mnt/fscompute_shared/roi/datasets/biodcase/biodcase_development_set/validation'
 
 #classes names
-nc: 7
+nc: 3
 
 #replace all class names list with your classes names
 names:
-  0: bma
-  1: bmb
-  2: bmz
-  3: bmd
-  4: bpd
-  5: bp20
-  6: bp20plus
+  0: bmabz
+  1: d
+  2: bp

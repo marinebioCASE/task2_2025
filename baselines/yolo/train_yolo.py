@@ -5,7 +5,7 @@ from ultralytics import YOLO
 
 
 def run():
-    YAML_FILE = './custom.yaml'
+    YAML_FILE = './custom_joined.yaml'
     run_name = 'biodcase_baseline'
 
     # Check if CUDA is available
@@ -23,22 +23,29 @@ def run():
     )
 
     # Load a model
-    model = YOLO('yolov8s.pt')
+    model = YOLO('yolo11s.yaml')
 
     # train the model
     best_params = {
-        'mixup': 0.0,
-        'copy_paste': 0.0,
         'iou': 0.3,
         'imgsz': 640,
-        'mosaic': 0.0,
-        'degrees': 0.0,
-        'shear': 0.0,
-        'perspective': 0.0,
-        'scale': 0.0
+        'hsv_s': 0,
+        'hsv_v':  0,
+        'degrees': 0,
+        'translate': 0,
+        'scale': 0,
+        'shear': 0,
+        'perspective': 0,
+        'flipud': 0,
+        'fliplr': 0,
+        'bgr': 0,
+        'mosaic': 0,
+        'mixup': 0,
+        'copy_paste': 0,
+        'erasing': 0,
+        'crop_fraction': 0,
     }
-
-    model.train(epochs=200, batch=32, data=YAML_FILE,
+    model.train(epochs=20, batch=32, data=YAML_FILE,
                 project=config['path'] + '/runs/detect/miller/' + run_name, resume=False, **best_params, device=0)
 
     experiment.end()

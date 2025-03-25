@@ -10,5 +10,5 @@
     "win_len" : 256,
     "hop_len" : 20,
 
-    "class_encoding": {"bma": 0,"bmb": 1, "bmz": 2, "bmd": 3, "bpd": 4, "bp20": 5, "bp20plus": 6}
+    "class_encoding": {"bma": 0,"bmb": 0, "bmz": 0, "bmd": 1, "bpd": 1, "bp20": 2, "bp20plus": 2}
 }
