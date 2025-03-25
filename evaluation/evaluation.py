@@ -26,6 +26,13 @@ def compute_confusion_matrix(ground_truth, predictions):
     return conf_matrix
 
 
+def compute_confusion_matrix_per_dataset(ground_truth, predictions):
+    for dataset_name, ground_truth_dataset in ground_truth.groupby('dataset'):
+        predictions_dataset = predictions.loc[predictions.dataset == dataset_name]
+        conf_matrix_dataset = compute_confusion_matrix(ground_truth_dataset, predictions_dataset)
+        yield dataset_name, conf_matrix_dataset
+
+
 def join_annotations_if_dir(path_to_annotations):
     if path_to_annotations.is_dir():
         annotations_list = []
@@ -48,7 +55,8 @@ def run(predictions_path, ground_truth_path, iou_threshold=0.3):
     ground_truth['detected'] = 0
     predictions['correct'] = 0
 
-    for wav_path_name, wav_predictions in tqdm(predictions.groupby('filename'), total=len(predictions.filename.unique())):
+    for (dataset_name, wav_path_name), wav_predictions in tqdm(predictions.groupby(['dataset', 'filename']),
+                                               total=len(predictions.filename.unique())):
         ground_truth_wav = ground_truth.loc[ground_truth['filename'] == wav_path_name]
         for class_id, class_predictions in wav_predictions.groupby('annotation'):
             ground_truth_wav_class = ground_truth_wav.loc[ground_truth_wav['annotation'] == class_id]
@@ -69,9 +77,13 @@ def run(predictions_path, ground_truth_path, iou_threshold=0.3):
                     ground_truth_index = ground_truth_not_detected.iloc[iou.argmax()].name
                     ground_truth.loc[ground_truth_index, 'detected'] = 1
 
-    conf_matrix = compute_confusion_matrix(ground_truth, predictions)
+    for dataset_name, conf_matrix_dataset in compute_confusion_matrix_per_dataset(ground_truth, predictions):
+        print(f'Results dataset {dataset_name}')
+        print(conf_matrix_dataset)
 
-    print('Results', conf_matrix)
+    conf_matrix = compute_confusion_matrix(ground_truth, predictions)
+    print('Final results')
+    print(conf_matrix)
 
 
 if __name__ == '__main__':
