@@ -75,6 +75,7 @@ It includes 1762 hours of audio recordings.
 | Elephant Island 2013 | 2625   | 1,786 | 152   | 299    | 3,662  | 1,859 | 1042  | 187  | 110.6 |
 | Elephant Island 2014 | 6,935  | 967   | 100   | 1,034  | 4,940  | 2,912 | 3660  | 216  | 97.1  |
 | Total                | 24,189 | 6,791 | 2,506 | 15,100 | 12,539 | 7,503 | 6,306 | 1762 |       |
+
 Table 1 : Summary statistics on the development datasets.
 
 ### Train and validation partition
