@@ -1,8 +1,11 @@
 # Training a YOLOv11 object detector
 
 YOLOv11 is an object detector model which can be re-trained on custom data. 
-To do so, first the challenge data needs to be converted to the YOLO format. 
-To this aim, first run the preprocess_data.py script.
+To do so, the challenge data will have to be converted to the YOLO format. 
+
+> [!IMPORTANT]  
+> All the scripts from this baseline need to be run from the baselines/yolo folder (otherwise the configuration files 
+> specified in relative paths will not be found)
 
 ## Create the environment using poetry
 You will need to install poetry first. 
@@ -11,6 +14,9 @@ poetry install
 ```
 
 ## Preprocess dataset
+To convert the dataset to the YOLO format, it needs to be pre-processed.
+The following steps will guide you through the creation of a YOLO-format dataset.
+
 First you will need to adjust the dataset_config.json parameters if desired. 
 The options are to modify the spectrogram parameters: 
 
