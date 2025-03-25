@@ -39,7 +39,7 @@ def join_annotations_if_dir(path_to_annotations):
     return total_annotations
 
 
-def run(predictions_path, ground_truth_path, iou_threshold=0.5):
+def run(predictions_path, ground_truth_path, iou_threshold=0.3):
     ground_truth = join_annotations_if_dir(ground_truth_path)
     predictions = join_annotations_if_dir(predictions_path)
 
