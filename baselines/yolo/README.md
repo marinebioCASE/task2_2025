@@ -56,6 +56,31 @@ When asked if it is for training, answer no (n). This will process all the backg
 
 ## Train the YOLO model
 First, adjust the paths on the custom.yaml file to point to the train and valid folders.
+You will need to specify (see custom.yaml and custom_joined.yaml files): 
+```yaml
+path:  './biodcase'
+train: './biodcase/biodcase_development_set/train'
+test: './biodcase/biodcase_evaluation_set'
+val: './biodcase_development_set/validation'
+
+#classes names
+nc: 3
+
+#replace all class names list with your classes names
+names:
+  0: bmabz
+  1: d
+  2: bp
+```
+
+> [!IMPORTANT]  
+> Make sure the names match the ones in your configuration file. If you are using the joined strategy in the json 
+> configuration file, you should also have them in the yaml file. If you're using the 7 classes, make sure you list them
+> accordingly and you change the nc to 7 in the yaml file
+
+Two yaml config files examples are provided, the custom.yaml and the custom_joined.yaml to use with or without the 
+joining strategey.
+
 Then, run the train_yolo.py script 
 ```bash
 python train_yolo.py 
