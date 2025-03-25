@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+import pathlib
 
 joining_dict = {'bma': 'bmabz',
                 'bmb': 'bmabz',
@@ -25,9 +26,22 @@ def compute_confusion_matrix(ground_truth, predictions):
     return conf_matrix
 
 
+def join_annotations_if_dir(path_to_annotations):
+    if path_to_annotations.is_dir():
+        annotations_list = []
+        for annotations_path in path_to_annotations.glob('*.csv'):
+            annotations = pd.read_csv(annotations_path, parse_dates=['start_datetime', 'end_datetime'])
+            annotations_list.append(annotations)
+        total_annotations = pd.concat(annotations_list, ignore_index=True)
+    else:
+        total_annotations = pd.read_csv(path_to_annotations, parse_dates=['start_datetime', 'end_datetime'])
+
+    return total_annotations
+
+
 def run(predictions_path, ground_truth_path, iou_threshold=0.5):
-    ground_truth = pd.read_csv(ground_truth_path, parse_dates=['start_datetime', 'end_datetime'])
-    predictions = pd.read_csv(predictions_path, parse_dates=['start_datetime', 'end_datetime'])
+    ground_truth = join_annotations_if_dir(ground_truth_path)
+    predictions = join_annotations_if_dir(predictions_path)
 
     ground_truth = ground_truth.replace(joining_dict)
     predictions = predictions.replace(joining_dict)
@@ -61,6 +75,6 @@ def run(predictions_path, ground_truth_path, iou_threshold=0.5):
 
 
 if __name__ == '__main__':
-    predictions_csv_path = input('Where are the predictions in csv format?')
-    ground_truth_csv_path = input('Where are the ground truth in csv format?')
+    predictions_csv_path = pathlib.Path(input('Where are the predictions in csv format?'))
+    ground_truth_csv_path = pathlib.Path(input('Where are the ground truth in csv format?'))
     run(predictions_csv_path, ground_truth_csv_path)
