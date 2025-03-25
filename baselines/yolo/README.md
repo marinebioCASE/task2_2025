@@ -31,10 +31,21 @@ The options are to modify the spectrogram parameters:
 }
 ```
 
+If you want to already have the classes joined during training, specify: 
+
+```json 
+{
+"class_encoding": {"bma": 0,"bmb": 0, "bmz": 0, "bmd": 1, "bpd": 1, "bp20": 2, "bp20plus": 2}
+}
+```
+
 Then you will have to run
-1. Run the preprocess_data.py script and pass the folder to the training folder
+1. Run the preprocess_data.py script and pass the folder to the training folder. 
+When asked if it is for training, answer yes (y). This will only select and process a proportion of background images. 
 2. Run the preprocess_data.py script and pass the folder to the validation folder 
+When asked if it is for training, answer yes (y). This will only select and process a proportion of background images. 
 3. Run the preprocess_data.py script and pass the folder to the test folder
+When asked if it is for training, answer no (n). This will process all the background images. 
 
 
 ## Train the YOLO model
@@ -44,12 +55,14 @@ Then, run the train_yolo.py script
 python train_yolo.py 
 ```
 This will generate the automatic YOLO output in the folder specified in the "path" argument of the yaml config file. 
-It will also automatically run the YOLO predictions on the test set.
 
-## Convert the YOLO output to the required format
+
+## Predict and convert the YOLO output to the required format
 To be able to compare the YOLO results with the ground truth annotations we will need to re-process the obtained results. 
 To do that, run the convert_yolo_output.py script 
 
 ```bash 
-python convert_yolo_output.py 
+python predict_and_convert_yolo_output.py 
 ```
+
+When asked, point to the evaluation folder path and the model which should be used for evaluation. 

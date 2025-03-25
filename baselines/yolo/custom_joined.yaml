@@ -1,0 +1,13 @@
+path:  '/mnt/fscompute_shared/roi/datasets/biodcase'
+train: '/mnt/fscompute_shared/roi/datasets/biodcase/biodcase_development_set/train'
+test: '/mnt/fscompute_shared/roi/datasets/biodcase/biodcase_evaluation_set'
+val: '/mnt/fscompute_shared/roi/datasets/biodcase/biodcase_development_set/validation'
+
+#classes names
+nc: 3
+
+#replace all class names list with your classes names
+names:
+  0: bmabz
+  1: d
+  2: bp
