@@ -53,7 +53,10 @@ aggregated for evaluation).
 
 To run the evaluation, the csv with the obtained detections and the mentioned format needs to be passed when asked in 
 the prompt.
-The csv should follow the mentioned format. 
+
+The passed path can be one single csv or a folder containing all the csvs to evaluatate (both for predictions and 
+ground truth).
+The csv(s) should follow the mentioned format above (extra columns are not a problem if desired).
 
 ```bash
 python evaluation.py 
