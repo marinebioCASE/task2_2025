@@ -12,10 +12,11 @@ joining_dict = {'bma': 'bmabz',
                 'bp20plus': 'bp'}
 
 
-def compute_confusion_matrix(ground_truth, predictions):
+def compute_confusion_matrix(ground_truth, predictions, all_classes):
     conf_matrix = pd.DataFrame(columns=['tp', 'fp', 'fn'], index=ground_truth.annotation.unique())
-    for class_id, class_predictions in predictions.groupby('annotation'):
+    for class_id in all_classes:
         ground_truth_class = ground_truth.loc[ground_truth.annotation == class_id]
+        class_predictions = predictions.loc[predictions.annotation == class_id]
         conf_matrix.loc[class_id, 'tp'] = ground_truth_class['detected'].sum()
         conf_matrix.loc[class_id, 'fp'] = len(class_predictions) - class_predictions['correct'].sum()
         conf_matrix.loc[class_id, 'fn'] = len(ground_truth_class) - ground_truth_class['detected'].sum()
@@ -26,10 +27,10 @@ def compute_confusion_matrix(ground_truth, predictions):
     return conf_matrix
 
 
-def compute_confusion_matrix_per_dataset(ground_truth, predictions):
+def compute_confusion_matrix_per_dataset(ground_truth, predictions, all_classes):
     for dataset_name, ground_truth_dataset in ground_truth.groupby('dataset'):
         predictions_dataset = predictions.loc[predictions.dataset == dataset_name]
-        conf_matrix_dataset = compute_confusion_matrix(ground_truth_dataset, predictions_dataset)
+        conf_matrix_dataset = compute_confusion_matrix(ground_truth_dataset, predictions_dataset, all_classes)
         yield dataset_name, conf_matrix_dataset
 
 
@@ -61,7 +62,8 @@ def run(predictions_path, ground_truth_path, iou_threshold=0.3):
         for class_id, class_predictions in wav_predictions.groupby('annotation'):
             ground_truth_wav_class = ground_truth_wav.loc[ground_truth_wav['annotation'] == class_id]
             ground_truth_not_detected = ground_truth_wav_class.loc[ground_truth_wav_class.detected == 0]
-            if ground_truth_wav_class.empty: continue
+            if ground_truth_not_detected.empty:
+                continue
             for i, row in class_predictions.iterrows():
                 # For each row, compute the minimum end and maximum start with all the ground truths
                 min_end = np.minimum(row['end_datetime'], ground_truth_not_detected['end_datetime'])
@@ -77,11 +79,12 @@ def run(predictions_path, ground_truth_path, iou_threshold=0.3):
                     ground_truth_index = ground_truth_not_detected.iloc[iou.argmax()].name
                     ground_truth.loc[ground_truth_index, 'detected'] = 1
 
-    for dataset_name, conf_matrix_dataset in compute_confusion_matrix_per_dataset(ground_truth, predictions):
+    all_classes = ground_truth.annotation.unique()
+    for dataset_name, conf_matrix_dataset in compute_confusion_matrix_per_dataset(ground_truth, predictions, all_classes):
         print(f'Results dataset {dataset_name}')
         print(conf_matrix_dataset)
 
-    conf_matrix = compute_confusion_matrix(ground_truth, predictions)
+    conf_matrix = compute_confusion_matrix(ground_truth, predictions, all_classes)
     print('Final results')
     print(conf_matrix)
 
