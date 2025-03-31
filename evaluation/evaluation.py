@@ -13,6 +13,14 @@ joining_dict = {'bma': 'bmabz',
 
 
 def compute_confusion_matrix(ground_truth, predictions, all_classes):
+    """
+    Compute the confusion matrix per given ground_truth and predictions.
+
+    :param ground_truth: pd.DataFrame of the ground truth annotations
+    :param predictions: pd.DataFrame of the predicted annotations
+    :param all_classes: list of all the classes in the dataset
+    :return: confusion matrix including tp, fp, fn, recall, precision
+    """
     conf_matrix = pd.DataFrame(columns=['tp', 'fp', 'fn'], index=ground_truth.annotation.unique())
     for class_id in all_classes:
         ground_truth_class = ground_truth.loc[ground_truth.annotation == class_id]
@@ -28,6 +36,14 @@ def compute_confusion_matrix(ground_truth, predictions, all_classes):
 
 
 def compute_confusion_matrix_per_dataset(ground_truth, predictions, all_classes):
+    """
+    Yields the confusion matrix per dataset
+
+    :param ground_truth: pd.DataFrame of the ground truth annotations
+    :param predictions: pd.DataFrame of the predicted annotations
+    :param all_classes: list of all the classes in the dataset
+    :return: str, pd.DataFrame  (dataset_name, confusion_matrix)
+    """
     for dataset_name, ground_truth_dataset in ground_truth.groupby('dataset'):
         predictions_dataset = predictions.loc[predictions.dataset == dataset_name]
         conf_matrix_dataset = compute_confusion_matrix(ground_truth_dataset, predictions_dataset, all_classes)
@@ -35,6 +51,13 @@ def compute_confusion_matrix_per_dataset(ground_truth, predictions, all_classes)
 
 
 def join_annotations_if_dir(path_to_annotations):
+    """
+    Join all the annotations of one directory, and return as pandas DataFrame
+
+    :param path_to_annotations: pathlib.Path pointing to the folder with all the csv prediction files to evaluate
+    or only one of them (either folder or file are good)
+    :return: pandas.DataFrame with all the annotations combined
+    """
     if path_to_annotations.is_dir():
         annotations_list = []
         for annotations_path in path_to_annotations.glob('*.csv'):
@@ -48,6 +71,16 @@ def join_annotations_if_dir(path_to_annotations):
 
 
 def run(predictions_path, ground_truth_path, iou_threshold=0.3):
+    """
+    Run the evaluation protocol. Prints the obtained results per dataset and in total
+
+    :param predictions_path: str or pathlib.Path pointing to the folder with all the csv prediction files to evaluate
+    or only one of them (either folder or file are good)
+    :param ground_truth_path: str or pathlib.Path pointing to the folder with all the csv ground truth files to evaluate
+    or only one of them (either folder or file are good)
+    :param iou_threshold: float, 0 to 1 for the IOU threshold to consider for evaluation
+    :return: None
+    """
     if type(predictions_path) is str:
         predictions_path = pathlib.Path(predictions_path)
     if type(ground_truth_path) is str:
