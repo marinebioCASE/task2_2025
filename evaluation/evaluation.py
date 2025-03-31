@@ -48,6 +48,10 @@ def join_annotations_if_dir(path_to_annotations):
 
 
 def run(predictions_path, ground_truth_path, iou_threshold=0.3):
+    if type(predictions_path) is str:
+        predictions_path = pathlib.Path(predictions_path)
+    if type(ground_truth_path) is str:
+        ground_truth_path = pathlib.Path(ground_truth_path)
     ground_truth = join_annotations_if_dir(ground_truth_path)
     predictions = join_annotations_if_dir(predictions_path)
 
