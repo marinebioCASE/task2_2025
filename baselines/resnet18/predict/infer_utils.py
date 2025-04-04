@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 import torch
 
-def save_results_to_df(args, all_info, all_y, all_y_hat):
+def save_results_to_df(args, all_info, all_y, all_y_hat, savename):
     datasets, filenames, start_offsets = [], [], []
 
     for info in all_info:
@@ -23,7 +23,7 @@ def save_results_to_df(args, all_info, all_y, all_y_hat):
                        'y_hat' : all_y_hat})
 
 
-    savepath = os.path.join(args.outputs_path, os.path.dirname(args.modelckpt), 'preds.csv') # custom name here
+    savepath = os.path.join(args.outputs_path, os.path.dirname(args.modelckpt), savename) # custom name here
     df.to_csv(savepath, index=False)
 
     print(f'[INFO]: Results successfully saved to {savepath}')

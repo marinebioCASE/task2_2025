@@ -33,7 +33,7 @@ def main():
             all_y.append(y)
             all_y_hat.append(y_hat_sigm)
 
-    save_results_to_df(args, all_info, all_y, all_y_hat)
+    save_results_to_df(args, all_info, all_y, all_y_hat, savename='preds_val.csv')
 
 if __name__ == '__main__':
     main()
