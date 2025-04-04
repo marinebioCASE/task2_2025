@@ -29,7 +29,7 @@ You can customize pathing and naming in the `args_train.py` file, and add your o
 
 You can run
 ```python
-python toy_train.py --train_annot XX --val_annot YY
+python toy_train.py --train_annot XX --val_annot YY --xp_name toy_model
 ```
 to start a toy training. 
 If pathing etc. are good, everything should run without warning or issues.
@@ -43,10 +43,21 @@ python infer.py --val_annot annotations/casey2017.csv | annotations/ --modelckpt
 `val_annot` and `modelckpt` are required so the script knows where to find annotations and the model to use to predict. 
 The `modelckpt`needs the path to the model, assuming it is stored in the `outputs/` dir.
 
-At the end of the forward pass, a CSV file [dataset, filename, start_offset, $y$ (ground truth), $\hat{y}$ (predictions)] will be created, 
+At the end of the forward pass, a CSV with columns
+
+[dataset, filename, start_offset, $y$ (ground truth), $\hat{y}$ (predictions)]
+
+will be created, 
 in the `outputs/model_dir/`. Default name is `preds.csv`, feel free to customize it ! 
 
 You can customize and add your own options in the `args.py` file. 
+
+If you run
+```python
+python infer.py --val_annot annotations/casey2017.csv | annotations/ --modelckpt toy_model/toy_model.pth
+```
+a CSV file `~/outputs/toy_model/preds.csv` will be created, that will be used as example for the evaluation part. 
+
 
 ### Evaluating 
 

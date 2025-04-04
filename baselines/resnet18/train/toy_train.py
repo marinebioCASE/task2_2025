@@ -23,7 +23,8 @@ print('[INFO]: Model loaded successfully')
 now = datetime.now().strftime('%m-%dT%H-%M')
 
 if args.xp_name:
-    xp_name = f'{now}_{args.xp_name}'
+    #xp_name = f'{now}_{args.xp_name} <- Commented to create toy paths, but we advise to use the "now" parameters not to overwrite potentiel previous shots
+    xp_name = args.xp_name
 else:
     xp_name = now
 print(f'[INFO]: xp name is {xp_name}')
