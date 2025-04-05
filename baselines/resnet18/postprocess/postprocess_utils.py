@@ -113,9 +113,9 @@ def binary_to_timestamp(df, args, save_name=None):
     final_df = pd.DataFrame(final_merged)
 
     print('[INFO]: Binary predictions turned to timestamps')
-    if save_name is not None:
-        save_path = os.path.join(args.outputs_path, os.path.dirname(args.preds_path), save_name)
-        final_df.to_csv(save_path, index=False)
-        print(f'[INFO]: Timestamps predicitions saved to {save_path}')
+
+    save_path = os.path.join(args.outputs_path, os.path.dirname(args.preds_path), 'preds_timestamp.csv')
+    final_df.to_csv(save_path, index=False)
+    print(f'[INFO]: Timestamps predicitions saved to {save_path}')
 
     return final_df

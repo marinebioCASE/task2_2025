@@ -44,9 +44,7 @@ python infer.py --val_annot annotations/casey2017.csv | annotations/ --modelckpt
 The `modelckpt`needs the path to the model, assuming it is stored in the `outputs/` dir.
 
 At the end of the forward pass, a CSV with columns
-
 [dataset, filename, start_offset, $y$ (ground truth), $\hat{y}$ (predictions)]
-
 will be created, 
 in the `outputs/model_dir/`. Default name is `preds.csv`, feel free to customize it ! 
 
@@ -59,12 +57,24 @@ python infer.py --val_annot annotations/casey2017.csv | annotations/ --modelckpt
 a CSV file `~/outputs/toy_model/preds.csv` will be created, that will be used as example for the evaluation part. 
 
 
-### Evaluating 
+### Post-processing
 
+To post-process, you can run
+```python
+python postprocess.py --preds_path ~/outputs/<path/to.csv>
+```
+`--preds_path` is require so the script knows where to find the predictions. 
+It assumes predictions are stored in the `outputs/`dir. 
+The CSV file is expected to have one entry per audio chunk, with the ground truth vector $y$ and the predictions vector $\hat{y}$ as columns. 
+
+Annotations will be binarized according to to the threshold yielding the best f$_1$ score for each class and then turned into a datetime interval.
+
+At the end, one CSV file is created in the same dir as the predictions file used as argument. It contains columns [dataset, filename, annotation, start_dt, end_dt], matching the format of the original annotation files.
+
+Additional CSV file may be created that contains the binarized annotations if you specify a `save_name` to the `binarize_pred()` function in the `postproces.py` file.
+
+### Evaluating
 Incoming...
-
-
-
 
 
 
